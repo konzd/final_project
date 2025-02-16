@@ -6,13 +6,17 @@ use App\Models\AlatModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Exception;
+use Illuminate\Support\Facades\Storage;
 
 class AlatController extends Controller
 {
     public function index()
     {
         try {
-            $alat = AlatModel::with('kategori')->get();
+            $alat = AlatModel::with('kategori')->get()->map(function ($item) {
+                $item->alat_gambar = $item->alat_gambar ? asset('storage/' . $item->alat_gambar) : null;
+                return $item;
+            });
 
             return response()->json([
                 'success' => true,
@@ -39,6 +43,8 @@ class AlatController extends Controller
                 ], 404);
             }
 
+            $alat->alat_gambar = $alat->alat_gambar ? asset('storage/' . $alat->alat_gambar) : null;
+
             return response()->json([
                 'success' => true,
                 'message' => 'Successfully retrieved alat data.',
@@ -62,18 +68,30 @@ class AlatController extends Controller
                 'alat_deskripsi' => 'nullable|string|max:255',
                 'alat_hargaperhari' => 'required|integer|min:1',
                 'alat_stok' => 'required|integer|min:0',
+                'alat_gambar' => 'nullable|image|mimes:jpg,png,jpeg|max:2048', 
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Gagal menambahkan data alat! Periksa kembali input Anda.',
-                    'data' => null,
                     'errors' => $validator->errors()
                 ], 422);
             }
 
-            $alat = AlatModel::create($validator->validated());
+            $gambarPath = null;
+            if ($request->hasFile('alat_gambar')) {
+                $gambarPath = $request->file('alat_gambar')->store('images', 'public');
+            }
+
+            $alat = AlatModel::create([
+                'alat_kategori_id' => $request->alat_kategori_id,
+                'alat_nama' => $request->alat_nama,
+                'alat_deskripsi' => $request->alat_deskripsi,
+                'alat_hargaperhari' => $request->alat_hargaperhari,
+                'alat_stok' => $request->alat_stok,
+                'alat_gambar' => $gambarPath,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -84,7 +102,6 @@ class AlatController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan pada server!',
-                'data' => null,
                 'errors' => $error->getMessage(),
             ], 500);
         }
@@ -106,7 +123,8 @@ class AlatController extends Controller
                 'alat_nama' => 'string|max:150',
                 'alat_deskripsi' => 'nullable|string|max:255',
                 'alat_hargaperhari' => 'integer|min:1',
-                'alat_stok' => 'integer|min:0'
+                'alat_stok' => 'integer|min:0',
+                'alat_gambar' => 'nullable|image|mimes:jpg,png,jpeg|max:2048', 
             ]);
 
             if ($validator->fails()) {
@@ -115,6 +133,13 @@ class AlatController extends Controller
                     'message' => 'Failed to update alat. Please check your input.',
                     'errors' => $validator->errors()
                 ], 400);
+            }
+
+            if ($request->hasFile('alat_gambar')) {
+                if ($alat->alat_gambar) {
+                    Storage::disk('public')->delete($alat->alat_gambar);
+                }
+                $alat->alat_gambar = $request->file('alat_gambar')->store('images', 'public');
             }
 
             $alat->update($validator->validated());
@@ -133,7 +158,6 @@ class AlatController extends Controller
         }
     }
 
-    // PATCH (Update sebagian)
     public function patch(Request $request, $id)
     {
         try {

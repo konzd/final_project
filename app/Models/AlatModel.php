@@ -13,12 +13,13 @@ class AlatModel extends Model
     protected $primaryKey = 'alat_id'; 
 
     protected $fillable = [
+        'alat_kategori_id',
         'alat_nama',
         'alat_deskripsi',
         'alat_hargaperhari',
         'alat_stok',
-        'alat_kategori_id',
-    ];
+        'alat_gambar',
+    ];    
 
     public function kategori()
     {

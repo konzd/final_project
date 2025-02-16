@@ -21,10 +21,10 @@ Route::post('/register', [AdminAuthController::class, 'register']);
 Route::post('/login', [AdminAuthController::class, 'login']);
 Route::post('P', [AdminAuthController::class, 'requestResetPassword']);
 Route::post('/reset-password', [AdminAuthController::class, 'resetPassword']);
+Route::apiResource('/alat', AlatController::class);
 
 Route::middleware(['auth:api'])->group(function () {
     Route::apiResource('/kategori', KategoriController::class);
-    Route::apiResource('/alat', AlatController::class);
     Route::apiResource('/penyewaan', PenyewaanController::class);
     Route::apiResource('/pelanggan', PelangganController::class);
     Route::apiResource('/data/pelanggan', PelangganDataController::class);
