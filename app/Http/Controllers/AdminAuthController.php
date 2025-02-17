@@ -34,7 +34,7 @@ class AdminAuthController extends Controller
         $user = User::create([
             'username' => $request->username,
             'email' => $request->email,
-            'password' => $request->password, 
+            'password' => bcrypt($request->password), // Gunakan bcrypt
             'role' => 'user'
         ]);
 
@@ -43,138 +43,6 @@ class AdminAuthController extends Controller
             'message' => 'User successfully created',
             'data' => $user
         ], 201);
-    }
-
-    public function register(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'admin_username' => 'required|string|unique:admin,admin_username',
-            'admin_email' => 'required|string|email|unique:admin,admin_email',
-            'admin_password' => 'required|string|min:6',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create an admin account, please check your input data',
-                'errors' => $validator->errors()
-            ], 400);
-        }
-
-        $admin = Admin::create([
-            'admin_username' => $request->admin_username,
-            'admin_email' => $request->admin_email,
-            'admin_password' => $request->admin_password,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Successfully created an admin account',
-            'data' => $admin
-        ], 201);
-    }
-
-    public function resetPassword(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
-            'token' => 'required|string',
-            'new_password' => 'required|string|min:6',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid request. Please check your input.',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-
-        $passwordReset = ResetPasswordModel::where('email', $request->email)
-                                    ->where('token', $request->token)
-                                    ->first();
-
-        if (!$passwordReset) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid token or email.',
-            ], 400);
-        }
-
-        $user = User::where('email', $request->email)->first();
-        $admin = Admin::where('admin_email', $request->email)->first();
-
-        if (!$user && !$admin) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found.',
-            ], 404);
-        }
-
-        if ($user) {
-            $user->password = $request->new_password; 
-            $user->save();
-        }
-
-        if ($admin) {
-            $admin->admin_password = $request->new_password; 
-            $admin->save();
-        }
-
-        $passwordReset->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Password updated successfully.',
-        ], 200);
-    }
-
-    public function requestResetPassword(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'username' => 'required_without:email|string',
-            'email' => 'required_without:username|string|email',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid request. Please check your input.',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-
-        $user = User::where('username', $request->username)
-                    ->orWhere('email', $request->email)
-                    ->first();
-
-        $admin = Admin::where('admin_username', $request->username)
-                    ->orWhere('admin_email', $request->email)
-                    ->first();
-
-        if (!$user && !$admin) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found.',
-            ], 404);
-        }
-
-        $email = $user ? $user->email : $admin->admin_email;
-        $resetToken = Str::random(40);
-
-        ResetPasswordModel::updateOrCreate(
-            ['email' => $email],
-            ['token' => $resetToken]
-        );
-
-        Mail::raw("Your password reset token is: $resetToken", function ($message) use ($email) {
-            $message->to($email)->subject('Password Reset Request');
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Reset token has been sent to your email.',
-        ], 200);
     }
 
     public function login(Request $request)
@@ -193,12 +61,13 @@ class AdminAuthController extends Controller
             ], 400);
         }
 
+        // Cek Admin
         $admin = Admin::where('admin_username', $request->username)
                       ->orWhere('admin_email', $request->email)
                       ->first();
 
-        if ($admin && $admin->admin_password === $request->password) {
-            $token = Auth::guard('api')->login($admin);
+        if ($admin && password_verify($request->password, $admin->admin_password)) {
+            $token = JWTAuth::fromUser($admin);
 
             return response()->json([
                 'success' => true,
@@ -212,12 +81,13 @@ class AdminAuthController extends Controller
             ], 200);
         }
 
+        // Cek User
         $user = User::where('username', $request->username)
                     ->orWhere('email', $request->email)
                     ->first();
 
-        if ($user && $user->password === $request->password) { 
-            $token = Auth::guard('api')->login($user);
+        if ($user && password_verify($request->password, $user->password)) {
+            $token = JWTAuth::fromUser($user);
 
             return response()->json([
                 'success' => true,
@@ -234,23 +104,23 @@ class AdminAuthController extends Controller
         return response()->json([
             'success' => false,
             'message' => 'Wrong username/email or password',
-        ], 400);
+        ], 401);
     }
 
-    public function logout(Request $request)
+    public function logout()
     {
         try {
-            JWTAuth::invalidate(JWTAuth::getToken());
+            Auth::guard('api')->logout();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Logged out successfully.',
+                'message' => 'Logged out successfully.'
             ]);
-        } catch (Exception $error) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Sorry, there was an error in the internal server.',
-                'errors' => $error->getMessage(),
+                'message' => 'Failed to log out.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

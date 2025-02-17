@@ -18,7 +18,7 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::post('/register', [AdminAuthController::class, 'register']);
-Route::post('/login', [AdminAuthController::class, 'login']);
+Route::post('/login', [AdminAuthController::class, 'login'])->name('login');
 Route::post('/reset-password', [AdminAuthController::class, 'resetPassword']);
 
 Route::middleware(['auth:api'])->group(function () {
