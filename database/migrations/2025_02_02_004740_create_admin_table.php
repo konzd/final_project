@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('admin', function (Blueprint $table) {
-            $table->id('admin_id'); 
-            $table->string('admin_username')->unique()->notNullable();
-            $table->string('admin_email')->unique()->notNullable();
-            $table->string('admin_password')->notNullable();
+        Schema::create('admins', function (Blueprint $table) { // Ubah jadi 'admins' sesuai konvensi Laravel
+            $table->id(); // Laravel otomatis membuat kolom 'id' sebagai primary key
+            $table->string('admin_username')->unique();
+            $table->string('admin_email')->unique();
+            $table->string('admin_password');
             $table->timestamps();
-
-            $table->index(['admin_username', 'admin_email']);
         });
     }
 
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('admin');
+        Schema::dropIfExists('admins'); // Pastikan nama tabel sesuai
     }
 };

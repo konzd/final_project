@@ -28,8 +28,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::apiResource('/alat', AlatController::class);
     Route::apiResource('/data/pelanggan', PelangganDataController::class);
     Route::apiResource('/detail/penyewaan', PenyewaanDetailController::class);
-
-    Route::post('/auth/logout', [AdminAuthController::class, 'logout']);
-    Route::get('/auth/me', [AdminAuthController::class, 'me']);
+    
+    Route::get('/me', [AdminAuthController::class, 'me']);
+    Route::post('/logout', [AdminAuthController::class, 'logout']);
 });
 

@@ -45,6 +45,35 @@ class AdminAuthController extends Controller
         ], 201);
     }
 
+    public function register(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'admin_username' => 'required|string|unique:admins,admin_username',
+            'admin_email' => 'required|string|email|unique:admins,admin_email',
+            'admin_password' => 'required|string|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create an admin account, please check your input data',
+                'errors' => $validator->errors()
+            ], 400);
+        }
+
+        $admin = Admin::create([
+            'admin_username' => $request->admin_username,
+            'admin_email' => $request->admin_email,
+            'admin_password' => bcrypt($request->admin_password), 
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully created an admin account',
+            'data' => $admin
+        ], 201);
+    }
+
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
