@@ -3,45 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Admin;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 class AdminAuthController extends Controller
 {
-    public function createUser(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'username' => 'required|string|unique:users,username',
-            'email' => 'required|string|email|unique:users,email',
-            'password' => 'required|string|min:6',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create user, please check your input',
-                'errors' => $validator->errors()
-            ], 400);
-        }
-
-        $user = User::create([
-            'username' => $request->username,
-            'email' => $request->email,
-            'password' => bcrypt($request->password),
-            'role' => 'user'
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User successfully created',
-            'data' => $user
-        ], 201);
-    }
-
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -74,9 +46,9 @@ class AdminAuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required_without:email|string',
-            'email' => 'required_without:username|string|email',
-            'password' => 'required|string',
+            'admin_username' => 'required_without:admin_email|string',
+            'admin_email' => 'required_without:admin_username|string|email',
+            'admin_password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -88,11 +60,11 @@ class AdminAuthController extends Controller
         }
 
         // Cek Admin
-        $admin = Admin::where('admin_username', $request->username)
-                      ->orWhere('admin_email', $request->email)
+        $admin = Admin::where('admin_username', $request->admin_username)
+                      ->orWhere('admin_email', $request->admin_email)
                       ->first();
 
-        if ($admin && password_verify($request->password, $admin->admin_password)) {
+        if ($admin && password_verify($request->admin_password, $admin->admin_password)) {
             $token = JWTAuth::fromUser($admin);
 
             return response()->json([
@@ -102,26 +74,6 @@ class AdminAuthController extends Controller
                     'role' => 'admin',
                     'username' => $admin->admin_username,
                     'email' => $admin->admin_email,
-                ],
-                'access_token' => $token
-            ], 200);
-        }
-
-        // Cek User
-        $user = User::where('username', $request->username)
-                    ->orWhere('email', $request->email)
-                    ->first();
-
-        if ($user && password_verify($request->password, $user->password)) {
-            $token = JWTAuth::fromUser($user);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Successfully logged in as user',
-                'data' => [
-                    'role' => 'user',
-                    'username' => $user->username,
-                    'email' => $user->email,
                 ],
                 'access_token' => $token
             ], 200);
@@ -151,38 +103,22 @@ class AdminAuthController extends Controller
         }
     }
 
-    public function me()
-    {
-        $token = request()->header('Authorization');
-        if (!$token) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Token missing in request header'
-            ], 401);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Token received',
-            'token' => $token
-        ], 200);
-    }
-
     public function refresh()
     {
         try {
+            $newToken = JWTAuth::parseToken()->refresh();
             return response()->json([
-                'success' => true,
-                'message' => 'Token refreshed successfully.',
-                'token' => JWTAuth::refresh(JWTAuth::getToken())
+                'access_token' => $newToken,
+                'token_type' => 'bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60,
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to refresh token.',
-                'error' => $e->getMessage()
-            ], 500);
+        } catch (TokenExpiredException $e) {
+            return response()->json(['error' => 'Token expired, please log in again'], 401);
+        } catch (TokenInvalidException $e) {
+            return response()->json(['error' => 'Invalid token'], 401);
+        } catch (JWTException $e) {
+            return response()->json(['error' => 'Token not provided'], 401);
         }
     }
-
+    
 }

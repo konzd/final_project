@@ -62,14 +62,9 @@ return [
     'providers' => [
     'users' => [
         'driver' => 'eloquent',
-        'model' => App\Models\User::class,
+        'model' => App\Models\Admin::class,
         
         Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
-    ],
-
-    'admins' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\Admin::class,
     ],
     ],
         // 'users' => [
