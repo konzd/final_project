@@ -65,7 +65,7 @@ class KategoriController extends Controller
         }
 
         try {
-            $kategori = KategoriModel::create($validator->validated());
+            $kategori = KategoriModel::createKategori($validator->validated());
             return response()->json([
                 'success' => true,
                 'message' => 'Successfully created kategori.',

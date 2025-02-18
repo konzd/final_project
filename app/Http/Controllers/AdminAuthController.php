@@ -3,15 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Admin;
-use App\Models\ResetPasswordModel;
 use App\Models\User;
-use Exception;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Exception;
+use Illuminate\Support\Facades\Auth;
 
 class AdminAuthController extends Controller
 {
@@ -34,7 +31,7 @@ class AdminAuthController extends Controller
         $user = User::create([
             'username' => $request->username,
             'email' => $request->email,
-            'password' => bcrypt($request->password), // Gunakan bcrypt
+            'password' => bcrypt($request->password),
             'role' => 'user'
         ]);
 
@@ -64,7 +61,7 @@ class AdminAuthController extends Controller
         $admin = Admin::create([
             'admin_username' => $request->admin_username,
             'admin_email' => $request->admin_email,
-            'admin_password' => bcrypt($request->admin_password), 
+            'admin_password' => bcrypt($request->admin_password),
         ]);
 
         return response()->json([
@@ -170,4 +167,22 @@ class AdminAuthController extends Controller
             'token' => $token
         ], 200);
     }
+
+    public function refresh()
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Token refreshed successfully.',
+                'token' => JWTAuth::refresh(JWTAuth::getToken())
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to refresh token.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
