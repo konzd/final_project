@@ -156,23 +156,18 @@ class AdminAuthController extends Controller
 
     public function me()
     {
-        $user = Auth::guard('api')->user();
-
-        if (!$user) {
+        $token = request()->header('Authorization');
+        if (!$token) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized'
+                'message' => 'Token missing in request header'
             ], 401);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Successfully fetched authenticated user',
-            'data' => [
-                'role' => $user->role ?? 'unknown',
-                'username' => $user->username ?? $user->admin_username,
-                'email' => $user->email ?? $user->admin_email,
-            ]
+            'message' => 'Token received',
+            'token' => $token
         ], 200);
     }
 }
