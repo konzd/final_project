@@ -17,13 +17,13 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AdminAuthController::class, 'register']);
 Route::post('/login', [AdminAuthController::class, 'login'])->name('login');
 Route::post('/reset-password', [AdminAuthController::class, 'resetPassword']);
+Route::apiResource('/alat', AlatController::class);
 
 // Route yang membutuhkan autentikasi
 Route::middleware(['auth:api'])->group(function () {
     Route::apiResource('/kategori', KategoriController::class);
     Route::apiResource('/penyewaan', PenyewaanController::class);
     Route::apiResource('/pelanggan', PelangganController::class);
-    Route::apiResource('/alat', AlatController::class);
     Route::apiResource('/data_pelanggan', PelangganDataController::class);
     Route::apiResource('/detail_penyewaan', PenyewaanDetailController::class);
 
